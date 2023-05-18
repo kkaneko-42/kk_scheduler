@@ -8,7 +8,7 @@ def main():
     intents.message_content = True
     bot = commands.Bot(command_prefix="/", intents=intents)
 
-    asyncio.run(bot.load_extension("cogs.kk_scheduler"))
+    asyncio.run(bot.load_extension("kk_scheduler"))
     bot.run(config.TOKEN)
 
 if __name__ == "__main__":
