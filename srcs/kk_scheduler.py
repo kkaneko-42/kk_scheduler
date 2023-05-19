@@ -1,39 +1,10 @@
 import config
 import re
+import json
 import discord
 from discord.ext import commands
 from discord import app_commands
-from typing import List
 from datetime import datetime, timedelta
-
-class Schedule():
-    def __init__(self, date, members_id):
-        self.date: datetime             = date
-        self.members_id: List[int]      = members_id
-        self.contents: str              = ""
-        self.remind_delta: timedelta    = timedelta()
-
-    def __str__(self):
-        # begin json
-        result = "{"
-
-        # date
-        result += f"\"date\": {self.date}"
-        # members_id
-        result += ", \"members\": ["
-        for id in self.members_id:
-            result += str(id)
-            if id != self.members_id[-1]:
-                result += ", "
-        result += "]"
-        # contents
-        result += f", \"contents\": \"{self.contents}\""
-        # remind_date
-        result += f", \"remind_delta\": {self.remind_delta}"
-
-        # end json
-        result += "}"
-        return result
 
 class KKScheduler(commands.Cog):
     def __init__(self, bot):
@@ -59,6 +30,10 @@ class KKScheduler(commands.Cog):
             minutes = int(minutes[0]) if len(minutes) != 0 else 0
         )
         return res
+    
+    def __split_without_empty_str(self, str, delim):
+        splited = str.split(delim)
+        return [s for s in splited if s != ""]
 
     @app_commands.command(
         name        = "schedule",
@@ -68,6 +43,7 @@ class KKScheduler(commands.Cog):
     @app_commands.guild_only() # Forbbiden using in DM
     @app_commands.describe(
         date            = "date description",
+        title           = "title description",
         members         = "members description",
         contents        = "contents description",
         remind_delta    = "remind description"
@@ -76,7 +52,8 @@ class KKScheduler(commands.Cog):
         self,
         interaction:    discord.Interaction,
         date:           str,
-        members:        str,
+        title:          str,
+        members:        str = "",
         contents:       str = "",
         remind_delta:   str = ""
     ):
@@ -88,15 +65,22 @@ class KKScheduler(commands.Cog):
         # Parse members id
         # Format: <@{id}>
         # NOTE: Slice [3:-1] in order to get id only
-        members_id_parsed = list(map(lambda s: int(s.strip()[3:-1]), members.split(",")))
+        members_id_parsed = list(map(
+            lambda s: int(s.strip()[3:-1]),
+            self.__split_without_empty_str(members, ",")
+        ))
 
         # Parse remind_date
         remind_delta_parsed = self.__parse_remind_delta(remind_delta)
 
         # Construct schedule
-        sche = Schedule(date_parsed, members_id_parsed)
-        sche.contents = contents
-        sche.remind_delta = remind_delta_parsed
+        sche = {}
+        sche["date"] = date_parsed.isoformat()
+        sche["title"] = title
+        sche["members_id"] = members_id_parsed
+        sche["contents"] = contents
+        sche["remind_delta_seconds"] = remind_delta_parsed.total_seconds()
+        print(json.dumps(sche))
 
         # Append the schedule
         self._schedules.append(sche)
