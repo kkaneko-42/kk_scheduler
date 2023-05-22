@@ -79,7 +79,7 @@ class KKScheduler(commands.Cog):
         sche["title"] = title
         sche["members_id"] = members_id_parsed
         sche["contents"] = contents
-        sche["remind_delta_seconds"] = remind_delta_parsed.total_seconds()
+        sche["remind_date"] = (date_parsed - remind_delta_parsed).isoformat()
         print(json.dumps(sche))
 
         # Append the schedule
