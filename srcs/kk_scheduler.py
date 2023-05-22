@@ -89,21 +89,19 @@ class KKScheduler(commands.Cog):
 
         await interaction.response.send_message("accepted")
 
-    async def __send_notify(self, notify_title, schedule):
-        message = ""
-        message += notify_title + "\n"
-        message += "Date: " + schedule["date"] + "\n"
-        message += "Title: " + schedule["title"] + "\n"
-        message += "Members: "
+    async def __send_notify(self, notify_suffix, schedule):
+        message = "イベント\"{}\"".format(schedule["title"]) + notify_suffix + "\n"
+        message += "予定時刻: " + schedule["date"] + "\n"
+        message += "参加者: "
         for m_id in schedule["members_id"]:
             message += f"<@{m_id}> "
         message += "\n"
-        message += "Contents: \n" + schedule["contents"]
+        message += "内容: \n" + schedule["contents"]
 
         channel = self.bot.get_channel(config.NOTIFY_CHANNEL_ID)
         await channel.send(message)
 
-    @tasks.loop(seconds = 10)
+    @tasks.loop(seconds = config.POOLING_SECONDS)
     async def notify(self):
         print("Searching notify...")
         now = datetime.now()
@@ -112,10 +110,10 @@ class KKScheduler(commands.Cog):
             remind_date = datetime.fromisoformat(s["remind_date"])
 
             if (date <= now):
-                await self.__send_notify("Notify", s)
+                await self.__send_notify("の予定時刻です", s)
                 self._schedules.remove(s)
             elif (remind_date <= now and s["is_reminded"] == False):
-                await self.__send_notify("Remind", s)
+                await self.__send_notify("のリマインドです", s)
                 s["is_reminded"] = True
 
 async def setup(bot):
