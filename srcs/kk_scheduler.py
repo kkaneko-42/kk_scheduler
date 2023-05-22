@@ -2,7 +2,7 @@ import config
 import re
 import json
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 from discord import app_commands
 from datetime import datetime, timedelta
 
@@ -17,6 +17,7 @@ class KKScheduler(commands.Cog):
     async def on_ready(self):
         # Guild command
         await self.bot.tree.sync(guild=discord.Object(config.GUILD_ID))
+        self.notify.start()
         print(f"Logged in as {self.bot.user}")
 
     def __parse_remind_delta(self, str):
@@ -80,12 +81,29 @@ class KKScheduler(commands.Cog):
         sche["members_id"] = members_id_parsed
         sche["contents"] = contents
         sche["remind_date"] = (date_parsed - remind_delta_parsed).isoformat()
+        sche["is_reminded"] = False
         print(json.dumps(sche))
 
         # Append the schedule
         self._schedules.append(sche)
 
         await interaction.response.send_message("accepted")
+
+    @tasks.loop(seconds = 10)
+    async def notify(self):
+        print("Searching notify...")
+        now = datetime.now()
+        for s in self._schedules:
+            date = datetime.fromisoformat(s["date"])
+            remind_date = datetime.fromisoformat(s["remind_date"])
+
+            if (date <= now):
+                print("notify: ", s)
+                self._schedules.remove(s)
+            elif (remind_date <= now and s["is_reminded"] == False):
+                print("remind: ", s)
+                s["is_reminded"] = True
+
 
 async def setup(bot):
     await bot.add_cog(KKScheduler(bot))
