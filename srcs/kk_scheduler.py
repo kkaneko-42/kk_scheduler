@@ -65,9 +65,9 @@ class KKScheduler(commands.Cog):
 
         # Parse members id
         # Format: <@{id}>
-        # NOTE: Slice [3:-1] in order to get id only
+        # NOTE: Slice [2:-1] in order to get id only
         members_id_parsed = list(map(
-            lambda s: int(s.strip()[3:-1]),
+            lambda s: int(s.strip()[2:-1]),
             self.__split_without_empty_str(members, ",")
         ))
 
@@ -89,6 +89,20 @@ class KKScheduler(commands.Cog):
 
         await interaction.response.send_message("accepted")
 
+    async def __send_notify(self, notify_title, schedule):
+        message = ""
+        message += notify_title + "\n"
+        message += "Date: " + schedule["date"] + "\n"
+        message += "Title: " + schedule["title"] + "\n"
+        message += "Members: "
+        for m_id in schedule["members_id"]:
+            message += f"<@{m_id}> "
+        message += "\n"
+        message += "Contents: \n" + schedule["contents"]
+
+        channel = self.bot.get_channel(config.NOTIFY_CHANNEL_ID)
+        await channel.send(message)
+
     @tasks.loop(seconds = 10)
     async def notify(self):
         print("Searching notify...")
@@ -98,12 +112,11 @@ class KKScheduler(commands.Cog):
             remind_date = datetime.fromisoformat(s["remind_date"])
 
             if (date <= now):
-                print("notify: ", s)
+                await self.__send_notify("Notify", s)
                 self._schedules.remove(s)
             elif (remind_date <= now and s["is_reminded"] == False):
-                print("remind: ", s)
+                await self.__send_notify("Remind", s)
                 s["is_reminded"] = True
-
 
 async def setup(bot):
     await bot.add_cog(KKScheduler(bot))
