@@ -104,7 +104,10 @@ class KKScheduler(commands.Cog):
         # Save changing
         self.__snapshot()
 
-        await interaction.response.send_message("accepted")
+        await interaction.response.send_message(
+            "以下の内容でスケジュールを登録しました\n" +
+            self.__schedule_to_str(sche)
+        )
 
     @app_commands.command(
         name = "schedule_list",
@@ -115,14 +118,21 @@ class KKScheduler(commands.Cog):
     async def schedule_list(self, interaction: discord.Interaction):
         await interaction.response.send_message(str(self._schedules))
 
-    async def __send_notify(self, notify_suffix, schedule):
-        message = "イベント\"{}\"".format(schedule["title"]) + notify_suffix + "\n"
-        message += "予定時刻: " + schedule["date"] + "\n"
-        message += "参加者: "
+    def __schedule_to_str(self, schedule):
+        res = ""
+        res += "タイトル: " + schedule["title"] + "\n"
+        res += "予定時刻: " + schedule["date"] + "\n"
+        res += "参加者: "
         for m_id in schedule["members_id"]:
-            message += f"<@{m_id}> "
-        message += "\n"
-        message += "内容: \n" + schedule["contents"]
+            res += f"<@{m_id}> "
+        res += "\n"
+        res += "内容: \n" + schedule["contents"]
+
+        return res
+
+    async def __send_notify(self, notify_header, schedule):
+        message = notify_header + "\n"
+        message += self.__schedule_to_str(schedule)
 
         channel = self.bot.get_channel(config.NOTIFY_CHANNEL_ID)
         await channel.send(message)
@@ -136,13 +146,13 @@ class KKScheduler(commands.Cog):
             remind_date = datetime.fromisoformat(s["remind_date"])
 
             if (date <= now):
-                await self.__send_notify("の予定時刻です", s)
+                await self.__send_notify("イベントの予定時刻です", s)
                 self._schedules.remove(s)
                 # Save changing
                 self.__snapshot()
 
             elif (remind_date <= now and s["is_reminded"] == False):
-                await self.__send_notify("のリマインドです", s)
+                await self.__send_notify("イベントのリマインドです", s)
                 s["is_reminded"] = True
 
     def __snapshot(self):
