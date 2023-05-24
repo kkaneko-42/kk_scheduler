@@ -13,11 +13,25 @@ class KKScheduler(commands.Cog):
         self._schedules = []
         print("initialized")
 
+    def __load_snapshot(self):
+        try:
+            with open(config.SNAPSHOT_PATH) as f:
+                self._schedules = json.load(f)
+            print("snapshot loaded")
+        except FileNotFoundError:
+            print("snapshot not found")
+
     @commands.Cog.listener()
     async def on_ready(self):
         # Guild command
         await self.bot.tree.sync(guild=discord.Object(config.GUILD_ID))
+
+        # Load snapshot
+        self.__load_snapshot()
+
+        # Start tasks
         self.notify.start()
+
         print(f"Logged in as {self.bot.user}")
 
     def __parse_remind_delta(self, str):
@@ -87,6 +101,9 @@ class KKScheduler(commands.Cog):
         # Append the schedule
         self._schedules.append(sche)
 
+        # Save changing
+        self.__snapshot()
+
         await interaction.response.send_message("accepted")
 
     @app_commands.command(
@@ -121,9 +138,18 @@ class KKScheduler(commands.Cog):
             if (date <= now):
                 await self.__send_notify("の予定時刻です", s)
                 self._schedules.remove(s)
+                # Save changing
+                self.__snapshot()
+
             elif (remind_date <= now and s["is_reminded"] == False):
                 await self.__send_notify("のリマインドです", s)
                 s["is_reminded"] = True
+
+    def __snapshot(self):
+        print("Save current schedules...")
+        with open(config.SNAPSHOT_PATH, "w") as f:
+            json.dump(self._schedules, f)
+        print("Saving completed.")
 
 async def setup(bot):
     await bot.add_cog(KKScheduler(bot))
