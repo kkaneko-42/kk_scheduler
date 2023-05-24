@@ -89,6 +89,15 @@ class KKScheduler(commands.Cog):
 
         await interaction.response.send_message("accepted")
 
+    @app_commands.command(
+        name = "schedule_list",
+        description = "Listing registered schedules"
+    )
+    @app_commands.guilds(config.GUILD_ID)
+    @app_commands.guild_only()
+    async def schedule_list(self, interaction: discord.Interaction):
+        await interaction.response.send_message(str(self._schedules))
+
     async def __send_notify(self, notify_suffix, schedule):
         message = "イベント\"{}\"".format(schedule["title"]) + notify_suffix + "\n"
         message += "予定時刻: " + schedule["date"] + "\n"
